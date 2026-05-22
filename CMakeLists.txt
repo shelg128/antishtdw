@@ -12,4 +12,5 @@ target_link_libraries(PowerMenuGuard PRIVATE advapi32 netapi32 shell32 user32 gd
 
 if(MINGW)
     target_link_options(PowerMenuGuard PRIVATE -municode)
+    target_link_options(PowerMenuGuard PRIVATE -static -static-libgcc -static-libstdc++)
 endif()

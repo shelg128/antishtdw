@@ -10,7 +10,8 @@ Scope program ini sengaja terbatas:
   - `Admin / current user`
   - `Standard user` lain yang dipilih dari akun lokal
 - Source project dan hasil build ada di `C:\Users\Admin\Documents\ANTI shtdw`
-- Installer menaruh aplikasi ke `C:\Users\Admin\Documents\ANTI shtdw\app`
+- Installer default menaruh aplikasi ke `%LOCALAPPDATA%\Power Menu Guard`
+- Build sekarang static untuk runtime MinGW dan installer ikut membawa runtime `UCRT x64` app-local
 - Uninstaller mengembalikan policy ke kondisi normal
 
 Program ini tidak:
@@ -18,6 +19,7 @@ Program ini tidak:
 - Memblokir semua software yang punya hak admin untuk melakukan shutdown
 - Mengubah perilaku tombol power fisik
 - Menjanjikan anti-shutdown mutlak
+- Menjamin kompatibel ke semua versi Windows atau Windows 32-bit
 
 Catatan mode `Standard user`:
 
@@ -37,9 +39,18 @@ Output:
 
 - `dist\PowerMenuGuard.exe`
 - `dist\PowerMenuGuard Setup.exe`
+- `dist\Power Menu Guard Portable x64.zip`
 - `dist\Enable Power Menu Guard.cmd`
 - `dist\Disable Power Menu Guard.cmd`
 - `dist\Status Power Menu Guard.cmd`
+- `dist\*.dll` untuk runtime `UCRT x64` app-local
+
+Paket yang disarankan untuk dipindah ke PC lain:
+
+- `Power Menu Guard Setup.exe` untuk instalasi normal
+- `Power Menu Guard Portable x64.zip` untuk copy manual
+
+Jangan pindahkan `PowerMenuGuard.exe` sendirian tanpa file `.dll` pendampingnya.
 
 ## Command line
 
