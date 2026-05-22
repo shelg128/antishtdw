@@ -1,20 +1,27 @@
-# Power Menu Guard
+# anti shtdw utilities
 
-Utility C++ kecil untuk `Enable` / `Disable` policy Windows yang menyembunyikan perintah `Shut Down`, `Restart`, `Sleep`, dan `Hibernate` di UI untuk user Windows saat ini.
+Repo ini sekarang berisi dua utility Windows yang berbeda:
 
-Scope program ini sengaja terbatas:
+1. `Power Menu Guard`
+   Utility C++ untuk `Enable` / `Disable` policy Windows yang menyembunyikan perintah `Shut Down`, `Restart`, `Sleep`, dan `Hibernate` di UI per-user.
+
+2. `QEMU Guest Agent Guard`
+   Utility desktop .NET untuk melihat status service `QEMU-GA`, lalu `Enable` atau `Disable` lagi dengan satu klik.
+
+## Power Menu Guard
+
+Scope utility ini sengaja terbatas:
 
 - Mengubah policy resmi Windows pada `HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoClose`
 - Bisa diaktifkan dari GUI atau command line
 - GUI punya dua mode target:
   - `Admin / current user`
   - `Standard user` lain yang dipilih dari akun lokal
-- Source project dan hasil build ada di `C:\Users\Admin\Documents\ANTI shtdw`
 - Installer default menaruh aplikasi ke `%LOCALAPPDATA%\Power Menu Guard`
-- Build release sekarang pakai `MSVC x64` dengan runtime statik `/MT`
+- Build release pakai `MSVC x64` dengan runtime statik `/MT`
 - Uninstaller mengembalikan policy ke kondisi normal
 
-Program ini tidak:
+Utility ini tidak:
 
 - Memblokir semua software yang punya hak admin untuk melakukan shutdown
 - Mengubah perilaku tombol power fisik
@@ -27,15 +34,13 @@ Catatan mode `Standard user`:
 - Jika profil user target belum ada, login sekali dulu dengan user tersebut
 - Bila app tidak dijalankan elevated, tombol apply untuk target user lain akan meminta UAC
 
-## Build
-
-Jalankan:
+### Build Power Menu Guard
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-Prasyarat build:
+Prasyarat:
 
 - Visual Studio Build Tools 2022 dengan komponen `MSVC x64/x86 build tools`
 - NSIS bila ingin membentuk installer
@@ -49,20 +54,40 @@ Output:
 - `dist\Disable Power Menu Guard.cmd`
 - `dist\Status Power Menu Guard.cmd`
 
-Paket yang disarankan untuk dipindah ke PC lain:
+## QEMU Guest Agent Guard
 
-- `Power Menu Guard Setup.exe` untuk instalasi normal
-- `Power Menu Guard Portable x64.zip` untuk copy manual
+Utility ini ditujukan untuk mesin Windows guest yang memakai `QEMU Guest Agent`.
 
-Build release MSVC ini tidak lagi butuh DLL runtime tambahan di samping `PowerMenuGuard.exe`.
+Fungsinya:
 
-## Command line
+- membaca status service `QEMU-GA`
+- menampilkan startup mode dan path service
+- `Enable`: set startup ke `Automatic` lalu start service
+- `Disable`: stop service lalu set startup ke `Disabled`
+- jika belum admin, app akan meminta UAC
 
-Switch ini cocok untuk automation atau installer. Dari PowerShell, panggil dengan `Start-Process -Wait` supaya proses GUI ditunggu sampai selesai.
+Batasnya:
+
+- hanya mengontrol service `QEMU-GA` di dalam Windows guest
+- tidak bisa menahan `hard power off` dari host atau provider VM
+
+### Build QEMU Guest Agent Guard
 
 ```powershell
-Start-Process -FilePath .\dist\PowerMenuGuard.exe -ArgumentList "--status" -Wait
-Start-Process -FilePath .\dist\PowerMenuGuard.exe -ArgumentList "--enable" -Wait
-Start-Process -FilePath .\dist\PowerMenuGuard.exe -ArgumentList "--disable" -Wait
-Start-Process -FilePath .\dist\PowerMenuGuard.exe -ArgumentList "--enable --user namauser" -Verb RunAs -Wait
+powershell -ExecutionPolicy Bypass -File .\QemuGaGuard\build.ps1
+```
+
+Prasyarat:
+
+- .NET SDK 8
+
+Output:
+
+- `QemuGaGuard\dist\publish\QemuGaGuard.exe`
+- `QemuGaGuard\dist\QemuGaGuard-portable-win-x64.zip`
+
+Probe headless:
+
+```powershell
+.\QemuGaGuard\dist\publish\QemuGaGuard.exe --export-state .\QemuGaGuard\dist\state.json
 ```

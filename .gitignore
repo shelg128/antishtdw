@@ -1,2 +1,5 @@
 dist/
 app/
+QemuGaGuard/dist/
+QemuGaGuard/src/QemuGaGuard/bin/
+QemuGaGuard/src/QemuGaGuard/obj/
