@@ -11,7 +11,7 @@ Scope program ini sengaja terbatas:
   - `Standard user` lain yang dipilih dari akun lokal
 - Source project dan hasil build ada di `C:\Users\Admin\Documents\ANTI shtdw`
 - Installer default menaruh aplikasi ke `%LOCALAPPDATA%\Power Menu Guard`
-- Build sekarang static untuk runtime MinGW dan installer ikut membawa runtime `UCRT x64` app-local
+- Build release sekarang pakai `MSVC x64` dengan runtime statik `/MT`
 - Uninstaller mengembalikan policy ke kondisi normal
 
 Program ini tidak:
@@ -35,22 +35,26 @@ Jalankan:
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
+Prasyarat build:
+
+- Visual Studio Build Tools 2022 dengan komponen `MSVC x64/x86 build tools`
+- NSIS bila ingin membentuk installer
+
 Output:
 
 - `dist\PowerMenuGuard.exe`
-- `dist\PowerMenuGuard Setup.exe`
+- `dist\Power Menu Guard Setup.exe`
 - `dist\Power Menu Guard Portable x64.zip`
 - `dist\Enable Power Menu Guard.cmd`
 - `dist\Disable Power Menu Guard.cmd`
 - `dist\Status Power Menu Guard.cmd`
-- `dist\*.dll` untuk runtime `UCRT x64` app-local
 
 Paket yang disarankan untuk dipindah ke PC lain:
 
 - `Power Menu Guard Setup.exe` untuk instalasi normal
 - `Power Menu Guard Portable x64.zip` untuk copy manual
 
-Jangan pindahkan `PowerMenuGuard.exe` sendirian tanpa file `.dll` pendampingnya.
+Build release MSVC ini tidak lagi butuh DLL runtime tambahan di samping `PowerMenuGuard.exe`.
 
 ## Command line
 

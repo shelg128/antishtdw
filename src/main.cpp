@@ -76,6 +76,10 @@ HWND g_refresh_button = nullptr;
 HWND g_close_button = nullptr;
 HFONT g_ui_font = nullptr;
 
+HMENU ControlId(int id) {
+    return reinterpret_cast<HMENU>(static_cast<INT_PTR>(id));
+}
+
 std::wstring g_current_user_name;
 std::vector<LocalUserInfo> g_standard_users;
 TargetMode g_selected_mode = TargetMode::kCurrentUser;
@@ -919,7 +923,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w_param, LPARAM l_
             0,
             0,
             window,
-            reinterpret_cast<HMENU>(kStatusId),
+            ControlId(kStatusId),
             nullptr,
             nullptr);
 
@@ -933,7 +937,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w_param, LPARAM l_
             0,
             0,
             window,
-            reinterpret_cast<HMENU>(kCurrentUserRadioId),
+            ControlId(kCurrentUserRadioId),
             nullptr,
             nullptr);
 
@@ -947,7 +951,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w_param, LPARAM l_
             0,
             0,
             window,
-            reinterpret_cast<HMENU>(kStandardUserRadioId),
+            ControlId(kStandardUserRadioId),
             nullptr,
             nullptr);
 
@@ -961,7 +965,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w_param, LPARAM l_
             0,
             0,
             window,
-            reinterpret_cast<HMENU>(kUserLabelId),
+            ControlId(kUserLabelId),
             nullptr,
             nullptr);
 
@@ -975,7 +979,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w_param, LPARAM l_
             0,
             0,
             window,
-            reinterpret_cast<HMENU>(kUserComboId),
+            ControlId(kUserComboId),
             nullptr,
             nullptr);
 
@@ -989,7 +993,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w_param, LPARAM l_
             0,
             0,
             window,
-            reinterpret_cast<HMENU>(kNoteId),
+            ControlId(kNoteId),
             nullptr,
             nullptr);
 
@@ -1003,7 +1007,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w_param, LPARAM l_
             0,
             0,
             window,
-            reinterpret_cast<HMENU>(kEnableId),
+            ControlId(kEnableId),
             nullptr,
             nullptr);
 
@@ -1017,7 +1021,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w_param, LPARAM l_
             0,
             0,
             window,
-            reinterpret_cast<HMENU>(kDisableId),
+            ControlId(kDisableId),
             nullptr,
             nullptr);
 
@@ -1031,7 +1035,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w_param, LPARAM l_
             0,
             0,
             window,
-            reinterpret_cast<HMENU>(kRefreshId),
+            ControlId(kRefreshId),
             nullptr,
             nullptr);
 
@@ -1045,7 +1049,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM w_param, LPARAM l_
             0,
             0,
             window,
-            reinterpret_cast<HMENU>(kCloseId),
+            ControlId(kCloseId),
             nullptr,
             nullptr);
 
