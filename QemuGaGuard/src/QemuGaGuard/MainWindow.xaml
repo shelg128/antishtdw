@@ -1,11 +1,11 @@
 <Window x:Class="QemuGaGuard.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="QEMU Guest Agent Guard"
-        Width="940"
-        Height="720"
-        MinWidth="860"
-        MinHeight="640"
+        Title="Anti Shutdown Guard"
+        Width="980"
+        Height="860"
+        MinWidth="900"
+        MinHeight="720"
         Background="#081019"
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
@@ -28,12 +28,13 @@
 
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">
             <Setter Property="Foreground" Value="#081019" />
-            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Padding" Value="18,12" />
-            <Setter Property="Margin" Value="0,0,12,12" />
+            <Setter Property="Padding" Value="16,11" />
+            <Setter Property="Margin" Value="0,0,10,10" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="MinHeight" Value="42" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -79,137 +80,221 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="18" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="18" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="18" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="18" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="18" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <Border Style="{StaticResource CardStyle}" Padding="24">
-            <Grid>
+            <Border Style="{StaticResource CardStyle}" Padding="24">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="18" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Width="90" Height="90" CornerRadius="20" Background="#132234" BorderBrush="#23415B" BorderThickness="1">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="AS" Foreground="{StaticResource AccentBrush}" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center" />
+                            <TextBlock Text="Guard" Foreground="{StaticResource MutedBrush}" FontSize="14" HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Anti Shutdown Guard" Foreground="{StaticResource TextBrush}" FontSize="28" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="Satu utility untuk QEMU Guest Agent, power button AC, keep-awake background, dan policy power menu user saat ini."
+                                   Foreground="{StaticResource MutedBrush}"
+                                   TextWrapping="Wrap"
+                                   FontSize="14" />
+                    </StackPanel>
+
+                    <Border Grid.Column="3"
+                            CornerRadius="999"
+                            Padding="14,8"
+                            Background="#132738"
+                            BorderBrush="#22405B"
+                            BorderThickness="1"
+                            VerticalAlignment="Center">
+                        <TextBlock x:Name="ServiceBadgeText"
+                                   Text="Checking"
+                                   Foreground="{StaticResource TextBrush}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold" />
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="2">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="90" />
+                    <ColumnDefinition Width="1.1*" />
                     <ColumnDefinition Width="18" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="0.9*" />
                 </Grid.ColumnDefinitions>
 
-                <Border Width="90" Height="90" CornerRadius="20" Background="#132234" BorderBrush="#23415B" BorderThickness="1">
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <TextBlock Text="QG" Foreground="{StaticResource AccentBrush}" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center" />
-                        <TextBlock Text="Guard" Foreground="{StaticResource MutedBrush}" FontSize="14" HorizontalAlignment="Center" />
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="QEMU Guest Agent" Foreground="{StaticResource TextBrush}" FontSize="20" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,10,0,18"
+                                   Text="Disable akan stop service QEMU-GA dan set startup ke Disabled. Enable akan mengembalikan startup ke Automatic."
+                                   Foreground="{StaticResource MutedBrush}"
+                                   TextWrapping="Wrap"
+                                   FontSize="13" />
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Account Mode" />
+                        <TextBlock x:Name="AdminStateText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Display Name" />
+                        <TextBlock x:Name="DisplayNameText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Current Status" />
+                        <TextBlock x:Name="StatusText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Startup Mode" />
+                        <TextBlock x:Name="StartModeText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Binary Path" />
+                        <TextBlock x:Name="BinaryPathText" Foreground="{StaticResource TextBrush}" FontSize="13" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
 
-                <StackPanel Grid.Column="2">
-                    <TextBlock Text="QEMU Guest Agent Guard" Foreground="{StaticResource TextBrush}" FontSize="28" FontWeight="SemiBold" />
-                    <TextBlock Margin="0,8,0,0"
-                               Text="Utility lokal untuk melihat status QEMU Guest Agent lalu enable atau disable lagi tanpa masuk Services secara manual."
-                               Foreground="{StaticResource MutedBrush}"
-                               TextWrapping="Wrap"
-                               FontSize="14" />
-                </StackPanel>
+                <Border Grid.Column="2" Style="{StaticResource CardStyle}" Background="{StaticResource PanelAltBrush}">
+                    <StackPanel>
+                        <TextBlock Text="QEMU Actions" Foreground="{StaticResource TextBrush}" FontSize="20" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,10,0,18"
+                                   Text="Aksi ini butuh administrator kalau service QEMU-GA terpasang."
+                                   Foreground="{StaticResource MutedBrush}"
+                                   TextWrapping="Wrap"
+                                   FontSize="13" />
 
-                <Border Grid.Column="3"
-                        CornerRadius="999"
-                        Padding="14,8"
-                        Background="#132738"
-                        BorderBrush="#22405B"
-                        BorderThickness="1"
-                        VerticalAlignment="Center">
-                    <TextBlock x:Name="ServiceBadgeText"
-                               Text="Checking"
-                               Foreground="{StaticResource TextBrush}"
-                               FontSize="13"
-                               FontWeight="SemiBold" />
+                        <WrapPanel>
+                            <Button x:Name="EnableButton" Width="150" Style="{StaticResource PrimaryButtonStyle}" Click="EnableButton_OnClick">Enable</Button>
+                            <Button x:Name="DisableButton" Width="150" Style="{StaticResource DangerButtonStyle}" Click="DisableButton_OnClick">Disable</Button>
+                            <Button x:Name="RefreshButton" Width="140" Style="{StaticResource SecondaryButtonStyle}" Click="RefreshButton_OnClick">Refresh</Button>
+                        </WrapPanel>
+
+                        <WrapPanel>
+                            <Button x:Name="ElevateButton" Width="220" Style="{StaticResource SecondaryButtonStyle}" Click="ElevateButton_OnClick">Relaunch as Admin</Button>
+                            <Button x:Name="ServicesButton" Width="170" Style="{StaticResource SecondaryButtonStyle}" Click="ServicesButton_OnClick">Open Services</Button>
+                        </WrapPanel>
+
+                        <Border Margin="0,10,0,16" CornerRadius="12" Padding="14" Background="#10202D" BorderBrush="#24415B" BorderThickness="1">
+                            <TextBlock x:Name="GuidanceText" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="13" />
+                        </Border>
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Last QEMU Action" />
+                        <TextBlock x:Name="LastActionText" Foreground="{StaticResource TextBrush}" FontSize="13" TextWrapping="Wrap" />
+                    </StackPanel>
                 </Border>
             </Grid>
-        </Border>
 
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.1*" />
-                <ColumnDefinition Width="18" />
-                <ColumnDefinition Width="0.9*" />
-            </Grid.ColumnDefinitions>
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.1*" />
+                    <ColumnDefinition Width="18" />
+                    <ColumnDefinition Width="0.9*" />
+                </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Windows Power Guard" Foreground="{StaticResource TextBrush}" FontSize="20" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,10,0,18"
+                                   Text="Bagian ini mengatur sisi Windows guest: tombol power AC, task keep-awake, dan menu power untuk user yang sedang login."
+                                   Foreground="{StaticResource MutedBrush}"
+                                   TextWrapping="Wrap"
+                                   FontSize="13" />
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Power Button AC" />
+                        <TextBlock x:Name="PowerButtonAcText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Power Button DC" />
+                        <TextBlock x:Name="PowerButtonDcText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Sleep After" />
+                        <TextBlock x:Name="SleepAfterText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Keep-Awake Task" />
+                        <TextBlock x:Name="KeepAwakeTaskText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="VM Guest Shutdown Service" />
+                        <TextBlock x:Name="VmGuestShutdownText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Windows Update Auto-Restart" />
+                        <TextBlock x:Name="WindowsUpdateRestartText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Power Menu Policy" />
+                        <TextBlock x:Name="PowerMenuPolicyText" Foreground="{StaticResource TextBrush}" FontSize="14" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource CardStyle}" Background="{StaticResource PanelAltBrush}">
+                    <StackPanel>
+                        <TextBlock Text="Windows Actions" Foreground="{StaticResource TextBrush}" FontSize="20" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,10,0,18"
+                                   Text="Keep-awake memakai SetThreadExecutionState dari process ini sendiri. Tidak ada autoclick, mouse move, atau input keyboard palsu."
+                                   Foreground="{StaticResource MutedBrush}"
+                                   TextWrapping="Wrap"
+                                   FontSize="13" />
+
+                        <WrapPanel>
+                            <Button x:Name="ApplyHardeningButton" Width="210" Style="{StaticResource PrimaryButtonStyle}" Click="ApplyHardeningButton_OnClick">Apply Hardening</Button>
+                            <Button x:Name="DisableVmGuestShutdownButton" Width="230" Style="{StaticResource DangerButtonStyle}" Click="DisableVmGuestShutdownButton_OnClick">Disable VM Shutdown Svc</Button>
+                        </WrapPanel>
+
+                        <WrapPanel>
+                            <Button x:Name="SetPowerButtonDoNothingButton" Width="230" Style="{StaticResource PrimaryButtonStyle}" Click="SetPowerButtonDoNothingButton_OnClick">AC Power: Do Nothing</Button>
+                            <Button x:Name="RestorePowerButtonShutdownButton" Width="190" Style="{StaticResource SecondaryButtonStyle}" Click="RestorePowerButtonShutdownButton_OnClick">AC Power: Shutdown</Button>
+                        </WrapPanel>
+
+                        <WrapPanel>
+                            <Button x:Name="InstallKeepAwakeButton" Width="210" Style="{StaticResource PrimaryButtonStyle}" Click="InstallKeepAwakeButton_OnClick">Install Keep-Awake</Button>
+                            <Button x:Name="RemoveKeepAwakeButton" Width="190" Style="{StaticResource DangerButtonStyle}" Click="RemoveKeepAwakeButton_OnClick">Remove Keep-Awake</Button>
+                        </WrapPanel>
+
+                        <WrapPanel>
+                            <Button x:Name="HidePowerMenuButton" Width="190" Style="{StaticResource SecondaryButtonStyle}" Click="HidePowerMenuButton_OnClick">Hide Power Menu</Button>
+                            <Button x:Name="ShowPowerMenuButton" Width="190" Style="{StaticResource SecondaryButtonStyle}" Click="ShowPowerMenuButton_OnClick">Show Power Menu</Button>
+                            <Button x:Name="SetSleepNeverButton" Width="160" Style="{StaticResource SecondaryButtonStyle}" Click="SetSleepNeverButton_OnClick">Sleep: Never</Button>
+                        </WrapPanel>
+
+                        <WrapPanel>
+                            <Button x:Name="WindowsUpdateNoRestartButton" Width="250" Style="{StaticResource SecondaryButtonStyle}" Click="WindowsUpdateNoRestartButton_OnClick">No Update Auto-Restart</Button>
+                            <Button x:Name="RefreshSystemButton" Width="120" Style="{StaticResource SecondaryButtonStyle}" Click="RefreshSystemButton_OnClick">Refresh</Button>
+                        </WrapPanel>
+
+                        <TextBlock Style="{StaticResource LabelStyle}" Text="Last Windows Action" />
+                        <TextBlock x:Name="SystemActionText" Foreground="{StaticResource TextBrush}" FontSize="13" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Border Grid.Row="6" Style="{StaticResource CardStyle}" Background="#0F1823">
                 <StackPanel>
-                    <TextBlock Text="Service State" Foreground="{StaticResource TextBrush}" FontSize="20" FontWeight="SemiBold" />
-                    <TextBlock Margin="0,10,0,18"
-                               Text="Target utama dari shutdown otomatis di mesin audit tadi adalah service QEMU Guest Agent."
+                    <TextBlock Text="Notes" Foreground="{StaticResource TextBrush}" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock Margin="0,12,0,8"
+                               Text="Kalau provider mematikan VM langsung di level host, Windows di dalam guest tetap tidak bisa menahan itu. Tool ini menahan jalur guest/Windows yang masih bisa dikontrol."
                                Foreground="{StaticResource MutedBrush}"
                                TextWrapping="Wrap"
                                FontSize="13" />
-
-                    <TextBlock Style="{StaticResource LabelStyle}" Text="Account Mode" />
-                    <TextBlock x:Name="AdminStateText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
-
-                    <TextBlock Style="{StaticResource LabelStyle}" Text="Display Name" />
-                    <TextBlock x:Name="DisplayNameText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
-
-                    <TextBlock Style="{StaticResource LabelStyle}" Text="Current Status" />
-                    <TextBlock x:Name="StatusText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
-
-                    <TextBlock Style="{StaticResource LabelStyle}" Text="Startup Mode" />
-                    <TextBlock x:Name="StartModeText" Foreground="{StaticResource TextBrush}" FontSize="14" Margin="0,0,0,16" TextWrapping="Wrap" />
-
-                    <TextBlock Style="{StaticResource LabelStyle}" Text="Binary Path" />
-                    <TextBlock x:Name="BinaryPathText" Foreground="{StaticResource TextBrush}" FontSize="13" TextWrapping="Wrap" />
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Column="2" Style="{StaticResource CardStyle}" Background="{StaticResource PanelAltBrush}">
-                <StackPanel>
-                    <TextBlock Text="Actions" Foreground="{StaticResource TextBrush}" FontSize="20" FontWeight="SemiBold" />
-                    <TextBlock Margin="0,10,0,18"
-                               Text="Disable akan stop service dan ubah startup ke Disabled. Enable akan kembalikan startup ke Automatic lalu start lagi."
+                    <TextBlock Margin="0,0,0,8"
+                               Text="Power menu policy hanya berlaku untuk user Windows yang sedang login. QEMU-GA dan scheduled task tetap bisa butuh administrator tergantung konfigurasi mesin."
                                Foreground="{StaticResource MutedBrush}"
                                TextWrapping="Wrap"
                                FontSize="13" />
-
-                    <WrapPanel>
-                        <Button x:Name="EnableButton" Width="150" Style="{StaticResource PrimaryButtonStyle}" Click="EnableButton_OnClick">Enable</Button>
-                        <Button x:Name="DisableButton" Width="150" Style="{StaticResource DangerButtonStyle}" Click="DisableButton_OnClick">Disable</Button>
-                        <Button x:Name="RefreshButton" Width="140" Style="{StaticResource SecondaryButtonStyle}" Click="RefreshButton_OnClick">Refresh</Button>
-                    </WrapPanel>
-
-                    <WrapPanel>
-                        <Button x:Name="ElevateButton" Width="220" Style="{StaticResource SecondaryButtonStyle}" Click="ElevateButton_OnClick">Relaunch as Admin</Button>
-                        <Button x:Name="ServicesButton" Width="170" Style="{StaticResource SecondaryButtonStyle}" Click="ServicesButton_OnClick">Open Services</Button>
-                    </WrapPanel>
-
-                    <Border Margin="0,10,0,16" CornerRadius="12" Padding="14" Background="#10202D" BorderBrush="#24415B" BorderThickness="1">
-                        <TextBlock x:Name="GuidanceText" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="13" />
-                    </Border>
-
-                    <TextBlock Style="{StaticResource LabelStyle}" Text="Last Action" />
-                    <TextBlock x:Name="LastActionText" Foreground="{StaticResource TextBrush}" FontSize="13" TextWrapping="Wrap" />
+                    <TextBlock Text="Headless: --keep-awake untuk mode background, --export-state &lt;path&gt; untuk snapshot JSON, dan --system-action install-keep-awake untuk memasang task."
+                               Foreground="{StaticResource MutedBrush}"
+                               TextWrapping="Wrap"
+                               FontSize="13" />
                 </StackPanel>
             </Border>
         </Grid>
-
-        <Border Grid.Row="4" Style="{StaticResource CardStyle}" Background="#0F1823">
-            <StackPanel>
-                <TextBlock Text="Notes" Foreground="{StaticResource TextBrush}" FontSize="18" FontWeight="SemiBold" />
-                <TextBlock Margin="0,12,0,8"
-                           Text="Kalau provider mematikan VM langsung di level host, Windows di dalam guest tetap tidak bisa menahan itu. Tool ini hanya mengontrol QEMU Guest Agent di sisi guest."
-                           Foreground="{StaticResource MutedBrush}"
-                           TextWrapping="Wrap"
-                           FontSize="13" />
-                <TextBlock Margin="0,0,0,8"
-                           Text="State default service yang terdeteksi saat audit adalah Auto + Running. Enable di tool ini mengembalikan ke mode itu."
-                           Foreground="{StaticResource MutedBrush}"
-                           TextWrapping="Wrap"
-                           FontSize="13" />
-                <TextBlock Text="Untuk verifikasi tanpa membuka UI, executable ini mendukung argumen --export-state &lt;path&gt; agar menulis snapshot status ke file JSON."
-                           Foreground="{StaticResource MutedBrush}"
-                           TextWrapping="Wrap"
-                           FontSize="13" />
-            </StackPanel>
-        </Border>
-    </Grid>
+    </ScrollViewer>
 </Window>

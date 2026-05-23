@@ -5,8 +5,8 @@ Repo ini sekarang berisi dua utility Windows yang berbeda:
 1. `Power Menu Guard`
    Utility C++ untuk `Enable` / `Disable` policy Windows yang menyembunyikan perintah `Shut Down`, `Restart`, `Sleep`, dan `Hibernate` di UI per-user.
 
-2. `QEMU Guest Agent Guard`
-   Utility desktop .NET untuk melihat status service `QEMU-GA`, lalu `Enable` atau `Disable` lagi dengan satu klik.
+2. `Anti Shutdown Guard` / `QEMU Guest Agent Guard`
+   Utility desktop .NET untuk melihat status service `QEMU-GA`, lalu `Enable` atau `Disable` lagi dengan satu klik. Build terbaru juga menyatukan setting power button AC, keep-awake background berbasis `SetThreadExecutionState`, dan policy power menu current user.
 
 ## Power Menu Guard
 
@@ -64,11 +64,15 @@ Fungsinya:
 - menampilkan startup mode dan path service
 - `Enable`: set startup ke `Automatic` lalu start service
 - `Disable`: stop service lalu set startup ke `Disabled`
+- `AC Power: Do Nothing`: set power button action saat AC ke `Do nothing`
+- `Install Keep-Awake`: membuat scheduled task `AntiIdleKeepAwake` yang menjalankan executable ini dengan argumen `--keep-awake`
+- `Hide Power Menu`: set policy `HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\NoClose`
 - jika belum admin, app akan meminta UAC
 
 Batasnya:
 
 - hanya mengontrol service `QEMU-GA` di dalam Windows guest
+- keep-awake tidak membuat autoclick, mouse move, atau input keyboard palsu
 - tidak bisa menahan `hard power off` dari host atau provider VM
 
 ### Build QEMU Guest Agent Guard

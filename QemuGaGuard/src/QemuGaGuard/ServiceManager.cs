@@ -126,7 +126,8 @@ public static class QemuGaServiceManager
             binaryPath = snapshot.BinaryPath,
             status = snapshot.StatusText,
             startMode = snapshot.StartModeText,
-            badge = snapshot.BadgeText
+            badge = snapshot.BadgeText,
+            systemGuard = SystemGuardManager.GetSnapshot()
         };
 
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions

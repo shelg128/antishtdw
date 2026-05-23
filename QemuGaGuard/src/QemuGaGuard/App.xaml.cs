@@ -14,6 +14,12 @@ public partial class App : Application
 
         try
         {
+            if (options.KeepAwake)
+            {
+                await SystemGuardManager.RunKeepAwakeLoopAsync();
+                return;
+            }
+
             if (options.InvokedAction is not null)
             {
                 if (options.InvokedAction == GuardAction.Enable)
@@ -26,11 +32,16 @@ public partial class App : Application
                 }
             }
 
+            if (options.SystemAction is not null)
+            {
+                await SystemGuardManager.RunActionAsync(options.SystemAction.Value);
+            }
+
             if (!string.IsNullOrWhiteSpace(options.ExportStatePath))
             {
                 var resolvedPath = Path.GetFullPath(options.ExportStatePath);
                 QemuGaServiceManager.ExportSnapshot(resolvedPath);
-                if (!options.ShowUi && options.InvokedAction is null)
+                if (!options.ShowUi && options.InvokedAction is null && options.SystemAction is null)
                 {
                     Shutdown(0);
                     return;
@@ -64,15 +75,22 @@ public partial class App : Application
         window.Show();
     }
 
-    private sealed record StartupOptions(GuardAction? InvokedAction, string? ExportStatePath, bool ShowUi)
+    private sealed record StartupOptions(
+        GuardAction? InvokedAction,
+        SystemGuardAction? SystemAction,
+        string? ExportStatePath,
+        bool ShowUi,
+        bool KeepAwake)
     {
-        public bool HeadlessOnly => !ShowUi && (InvokedAction is not null || !string.IsNullOrWhiteSpace(ExportStatePath));
+        public bool HeadlessOnly => !ShowUi && (InvokedAction is not null || SystemAction is not null || !string.IsNullOrWhiteSpace(ExportStatePath));
 
         public static StartupOptions Parse(string[] args)
         {
             GuardAction? invokedAction = null;
+            SystemGuardAction? systemAction = null;
             string? exportStatePath = null;
             bool showUi = false;
+            bool keepAwake = false;
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -90,6 +108,26 @@ public partial class App : Application
                         invokedAction = GuardAction.Disable;
                     }
                 }
+                else if (string.Equals(current, "--system-action", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    i++;
+                    var actionValue = args[i].ToLowerInvariant();
+                    systemAction = actionValue switch
+                    {
+                        "set-power-button-do-nothing" => SystemGuardAction.SetPowerButtonDoNothing,
+                        "set-power-button-shutdown" => SystemGuardAction.SetPowerButtonShutdown,
+                        "install-keep-awake" => SystemGuardAction.InstallKeepAwake,
+                        "remove-keep-awake" => SystemGuardAction.RemoveKeepAwake,
+                        "hide-power-menu" => SystemGuardAction.HidePowerMenu,
+                        "show-power-menu" => SystemGuardAction.ShowPowerMenu,
+                        "disable-vm-guest-shutdown" => SystemGuardAction.DisableVmGuestShutdown,
+                        "enable-vm-guest-shutdown" => SystemGuardAction.EnableVmGuestShutdown,
+                        "set-sleep-never" => SystemGuardAction.SetSleepNever,
+                        "set-windows-update-no-auto-restart" => SystemGuardAction.SetWindowsUpdateNoAutoRestart,
+                        "apply-recommended-hardening" => SystemGuardAction.ApplyRecommendedHardening,
+                        _ => throw new ArgumentException($"Unknown system action: {actionValue}")
+                    };
+                }
                 else if (string.Equals(current, "--export-state", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                 {
                     i++;
@@ -99,9 +137,13 @@ public partial class App : Application
                 {
                     showUi = true;
                 }
+                else if (string.Equals(current, "--keep-awake", StringComparison.OrdinalIgnoreCase))
+                {
+                    keepAwake = true;
+                }
             }
 
-            return new StartupOptions(invokedAction, exportStatePath, showUi);
+            return new StartupOptions(invokedAction, systemAction, exportStatePath, showUi, keepAwake);
         }
     }
 }

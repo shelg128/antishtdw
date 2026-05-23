@@ -8,6 +8,7 @@ namespace QemuGaGuard;
 public partial class MainWindow : Window
 {
     private bool _busy;
+    private ServiceSnapshot? _lastServiceSnapshot;
 
     public MainWindow()
     {
@@ -29,12 +30,17 @@ public partial class MainWindow : Window
 
         try
         {
-            var snapshot = await Task.Run(QemuGaServiceManager.GetSnapshot);
-            ApplySnapshot(snapshot, lastActionOverride);
+            var qemuSnapshotTask = Task.Run(QemuGaServiceManager.GetSnapshot);
+            var systemSnapshotTask = Task.Run(SystemGuardManager.GetSnapshot);
+
+            await Task.WhenAll(qemuSnapshotTask, systemSnapshotTask);
+            ApplySnapshot(qemuSnapshotTask.Result, lastActionOverride);
+            ApplySystemSnapshot(systemSnapshotTask.Result);
         }
         catch (Exception ex)
         {
             LastActionText.Text = ex.Message;
+            SystemActionText.Text = ex.Message;
         }
         finally
         {
@@ -45,6 +51,7 @@ public partial class MainWindow : Window
 
     private void ApplySnapshot(ServiceSnapshot snapshot, string? lastActionOverride = null)
     {
+        _lastServiceSnapshot = snapshot;
         ServiceBadgeText.Text = snapshot.BadgeText;
         ServiceBadgeText.Foreground = new SolidColorBrush(snapshot.BadgeColor);
         AdminStateText.Text = snapshot.IsElevated
@@ -64,6 +71,28 @@ public partial class MainWindow : Window
         EnableButton.IsEnabled = snapshot.Exists && !_busy;
         DisableButton.IsEnabled = snapshot.Exists && !_busy;
         ElevateButton.IsEnabled = !snapshot.IsElevated && !_busy;
+    }
+
+    private void ApplySystemSnapshot(SystemGuardSnapshot snapshot)
+    {
+        PowerButtonAcText.Text = snapshot.PowerButtonAc;
+        PowerButtonDcText.Text = snapshot.PowerButtonDc;
+        SleepAfterText.Text = $"AC: {snapshot.SleepAfterAc} / DC: {snapshot.SleepAfterDc}";
+
+        KeepAwakeTaskText.Text = snapshot.KeepAwakeTaskExists
+            ? $"{snapshot.KeepAwakeTaskStatus}\n{snapshot.KeepAwakeTaskCommand}"
+            : "Not installed";
+
+        VmGuestShutdownText.Text = $"{snapshot.VmGuestShutdownStatus} / {snapshot.VmGuestShutdownStartMode}";
+        WindowsUpdateRestartText.Text = snapshot.WindowsUpdateNoAutoRestart
+            ? "Blocked while a user is logged on"
+            : "Not blocked by this policy";
+
+        PowerMenuPolicyText.Text = snapshot.PowerMenuHidden
+            ? "Hidden for current user"
+            : "Visible for current user";
+
+        SystemActionText.Text = "Ready.";
     }
 
     private async Task RunActionAsync(GuardAction action)
@@ -130,11 +159,48 @@ public partial class MainWindow : Window
 
     private void SetButtonsEnabled(bool enabled)
     {
-        EnableButton.IsEnabled = enabled;
-        DisableButton.IsEnabled = enabled;
+        var serviceExists = _lastServiceSnapshot?.Exists ?? false;
+        EnableButton.IsEnabled = enabled && serviceExists;
+        DisableButton.IsEnabled = enabled && serviceExists;
         RefreshButton.IsEnabled = enabled;
         ServicesButton.IsEnabled = enabled;
         ElevateButton.IsEnabled = enabled && !QemuGaServiceManager.IsProcessElevated();
+        SetPowerButtonDoNothingButton.IsEnabled = enabled;
+        RestorePowerButtonShutdownButton.IsEnabled = enabled;
+        InstallKeepAwakeButton.IsEnabled = enabled;
+        RemoveKeepAwakeButton.IsEnabled = enabled;
+        HidePowerMenuButton.IsEnabled = enabled;
+        ShowPowerMenuButton.IsEnabled = enabled;
+        ApplyHardeningButton.IsEnabled = enabled;
+        DisableVmGuestShutdownButton.IsEnabled = enabled;
+        SetSleepNeverButton.IsEnabled = enabled;
+        WindowsUpdateNoRestartButton.IsEnabled = enabled;
+        RefreshSystemButton.IsEnabled = enabled;
+    }
+
+    private async Task RunSystemActionAsync(SystemGuardAction action, string busyText, string successText)
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        SetButtonsEnabled(false);
+        SystemActionText.Text = busyText;
+
+        try
+        {
+            await SystemGuardManager.RunActionAsync(action);
+            await RefreshUiAsync();
+            SystemActionText.Text = successText;
+        }
+        catch (Exception ex)
+        {
+            SystemActionText.Text = ex.Message;
+            _busy = false;
+            SetButtonsEnabled(true);
+        }
     }
 
     private async void EnableButton_OnClick(object sender, RoutedEventArgs e)
@@ -150,6 +216,12 @@ public partial class MainWindow : Window
     private async void RefreshButton_OnClick(object sender, RoutedEventArgs e)
     {
         await RefreshUiAsync("State refreshed.");
+    }
+
+    private async void RefreshSystemButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await RefreshUiAsync("State refreshed.");
+        SystemActionText.Text = "State refreshed.";
     }
 
     private void ElevateButton_OnClick(object sender, RoutedEventArgs e)
@@ -171,5 +243,85 @@ public partial class MainWindow : Window
         {
             LastActionText.Text = ex.Message;
         }
+    }
+
+    private async void SetPowerButtonDoNothingButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await RunSystemActionAsync(
+            SystemGuardAction.SetPowerButtonDoNothing,
+            "Setting AC power button to Do nothing...",
+            "AC power button is now Do nothing.");
+    }
+
+    private async void ApplyHardeningButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await RunSystemActionAsync(
+            SystemGuardAction.ApplyRecommendedHardening,
+            "Applying recommended guest-side shutdown hardening...",
+            "Recommended guest-side shutdown hardening applied.");
+    }
+
+    private async void DisableVmGuestShutdownButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await RunSystemActionAsync(
+            SystemGuardAction.DisableVmGuestShutdown,
+            "Disabling VM guest shutdown integration service...",
+            "VM guest shutdown integration service disabled.");
+    }
+
+    private async void SetSleepNeverButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await RunSystemActionAsync(
+            SystemGuardAction.SetSleepNever,
+            "Setting sleep and hibernate timeouts to Never...",
+            "Sleep and hibernate timeouts are now Never.");
+    }
+
+    private async void WindowsUpdateNoRestartButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await RunSystemActionAsync(
+            SystemGuardAction.SetWindowsUpdateNoAutoRestart,
+            "Setting Windows Update no auto-restart policy...",
+            "Windows Update no auto-restart policy enabled.");
+    }
+
+    private async void RestorePowerButtonShutdownButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await RunSystemActionAsync(
+            SystemGuardAction.SetPowerButtonShutdown,
+            "Setting AC power button to Shut down...",
+            "AC power button is now Shut down.");
+    }
+
+    private async void InstallKeepAwakeButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await RunSystemActionAsync(
+            SystemGuardAction.InstallKeepAwake,
+            "Installing keep-awake scheduled task...",
+            "Keep-awake task installed and started.");
+    }
+
+    private async void RemoveKeepAwakeButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await RunSystemActionAsync(
+            SystemGuardAction.RemoveKeepAwake,
+            "Removing keep-awake scheduled task...",
+            "Keep-awake task removed.");
+    }
+
+    private async void HidePowerMenuButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await RunSystemActionAsync(
+            SystemGuardAction.HidePowerMenu,
+            "Hiding Windows power menu for current user...",
+            "Windows power menu hidden for current user.");
+    }
+
+    private async void ShowPowerMenuButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await RunSystemActionAsync(
+            SystemGuardAction.ShowPowerMenu,
+            "Showing Windows power menu for current user...",
+            "Windows power menu restored for current user.");
     }
 }
