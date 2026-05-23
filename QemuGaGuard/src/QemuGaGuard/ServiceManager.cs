@@ -23,7 +23,7 @@ public sealed record ServiceSnapshot(
     string StatusText,
     string StartModeText,
     string BadgeText,
-    Color BadgeColor);
+    System.Windows.Media.Color BadgeColor);
 
 public static class QemuGaServiceManager
 {
@@ -177,7 +177,7 @@ public static class QemuGaServiceManager
             StatusText: "Missing",
             StartModeText: "Unknown",
             BadgeText: "Missing",
-            BadgeColor: Color.FromRgb(243, 201, 105));
+            BadgeColor: System.Windows.Media.Color.FromRgb(243, 201, 105));
     }
 
     private static string DescribeStartType(uint startType)
@@ -208,16 +208,16 @@ public static class QemuGaServiceManager
         };
     }
 
-    private static Color BuildBadgeColor(ServiceControllerStatus status, uint startType)
+    private static System.Windows.Media.Color BuildBadgeColor(ServiceControllerStatus status, uint startType)
     {
         if (startType == ServiceDisabled)
         {
-            return Color.FromRgb(255, 125, 114);
+            return System.Windows.Media.Color.FromRgb(255, 125, 114);
         }
 
         return status == ServiceControllerStatus.Running
-            ? Color.FromRgb(57, 208, 165)
-            : Color.FromRgb(243, 201, 105);
+            ? System.Windows.Media.Color.FromRgb(57, 208, 165)
+            : System.Windows.Media.Color.FromRgb(243, 201, 105);
     }
 
     private static ServiceConfiguration QueryConfiguration(string serviceName)

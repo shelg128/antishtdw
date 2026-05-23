@@ -38,11 +38,14 @@ public sealed record SystemGuardSnapshot(
     bool PowerMenuHidden,
     string VmGuestShutdownStatus,
     string VmGuestShutdownStartMode,
-    bool WindowsUpdateNoAutoRestart);
+    bool WindowsUpdateNoAutoRestart,
+    bool MouseMoverTaskExists,
+    string MouseMoverTaskStatus);
 
 public static class SystemGuardManager
 {
     public const string KeepAwakeTaskName = "AntiIdleKeepAwake";
+    public const string MouseMoverTaskName = "AntiShutdownGuardMouseMover";
 
     private const uint EsContinuous = 0x80000000;
     private const uint EsSystemRequired = 0x00000001;
@@ -54,6 +57,7 @@ public static class SystemGuardManager
         var powerButton = QueryPowerButtonAction();
         var sleepAfter = QueryPowerSetting("SUB_SLEEP", "STANDBYIDLE", DescribeSeconds);
         var task = QueryKeepAwakeTask();
+        var mouseMoverTask = QueryMouseMoverTask();
         var vmGuestShutdown = QueryServiceState("vmicshutdown");
 
         return new SystemGuardSnapshot(
@@ -67,7 +71,9 @@ public static class SystemGuardManager
             PowerMenuHidden: IsPowerMenuHidden(),
             VmGuestShutdownStatus: vmGuestShutdown.Status,
             VmGuestShutdownStartMode: vmGuestShutdown.StartMode,
-            WindowsUpdateNoAutoRestart: IsWindowsUpdateNoAutoRestartEnabled());
+            WindowsUpdateNoAutoRestart: IsWindowsUpdateNoAutoRestartEnabled(),
+            MouseMoverTaskExists: mouseMoverTask.Exists,
+            MouseMoverTaskStatus: mouseMoverTask.Status);
     }
 
     public static async Task RunActionAsync(SystemGuardAction action)
@@ -205,6 +211,39 @@ public static class SystemGuardManager
         await RunProcessAsync("schtasks.exe", "/Delete", "/TN", KeepAwakeTaskName, "/F");
     }
 
+    public static async Task InstallMouseMoverTaskAsync()
+    {
+        var executable = ResolveExecutablePath();
+        var taskXml = BuildMouseMoverTaskXml(executable);
+        var taskXmlPath = Path.Combine(Path.GetTempPath(), $"{MouseMoverTaskName}-{Guid.NewGuid():N}.xml");
+
+        try
+        {
+            File.WriteAllText(taskXmlPath, taskXml, Encoding.Unicode);
+            await RunProcessAsync("schtasks.exe", "/Create", "/TN", MouseMoverTaskName, "/XML", taskXmlPath, "/F");
+        }
+        finally
+        {
+            File.Delete(taskXmlPath);
+        }
+    }
+
+    public static async Task RemoveMouseMoverTaskAsync()
+    {
+        _ = await RunProcessAsync("schtasks.exe", false, "/End", "/TN", MouseMoverTaskName);
+        await RunProcessAsync("schtasks.exe", "/Delete", "/TN", MouseMoverTaskName, "/F");
+    }
+
+    public static async Task EndMouseMoverTaskAsync()
+    {
+        _ = await RunProcessAsync("schtasks.exe", false, "/End", "/TN", MouseMoverTaskName);
+    }
+
+    public static async Task StartMouseMoverTaskAsync()
+    {
+        _ = await RunProcessAsync("schtasks.exe", false, "/Run", "/TN", MouseMoverTaskName);
+    }
+
     private static (string Ac, string Dc) QueryPowerButtonAction()
     {
         try
@@ -297,6 +336,19 @@ public static class SystemGuardManager
         return (true, string.IsNullOrWhiteSpace(status) ? "Installed" : status, string.IsNullOrWhiteSpace(command) ? "-" : command);
     }
 
+    public static (bool Exists, string Status, string Command) QueryMouseMoverTask()
+    {
+        var output = RunProcess("schtasks.exe", false, "/Query", "/TN", MouseMoverTaskName, "/FO", "LIST", "/V");
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            return (false, "Not installed", "-");
+        }
+
+        var status = FindListValue(output, "Status");
+        var command = FindListValue(output, "Task To Run");
+        return (true, string.IsNullOrWhiteSpace(status) ? "Installed" : status, string.IsNullOrWhiteSpace(command) ? "-" : command);
+    }
+
     private static string BuildKeepAwakeTaskXml(string executable)
     {
         XNamespace ns = "http://schemas.microsoft.com/windows/2004/02/mit/task";
@@ -341,6 +393,55 @@ public static class SystemGuardManager
                     new XElement(ns + "Exec",
                         new XElement(ns + "Command", executable),
                         new XElement(ns + "Arguments", "--keep-awake"),
+                        new XElement(ns + "WorkingDirectory", workingDirectory)))));
+
+        return document.ToString(SaveOptions.DisableFormatting);
+    }
+
+    private static string BuildMouseMoverTaskXml(string executable)
+    {
+        XNamespace ns = "http://schemas.microsoft.com/windows/2004/02/mit/task";
+        var userName = WindowsIdentity.GetCurrent().Name;
+        var workingDirectory = Path.GetDirectoryName(executable) ?? Environment.CurrentDirectory;
+
+        var document = new XDocument(
+            new XDeclaration("1.0", "UTF-16", null),
+            new XElement(ns + "Task",
+                new XAttribute("version", "1.4"),
+                new XElement(ns + "RegistrationInfo",
+                    new XElement(ns + "Author", userName),
+                    new XElement(ns + "Description", "Starts QemuGaGuard in system tray on logon.")),
+                new XElement(ns + "Triggers",
+                    new XElement(ns + "LogonTrigger",
+                        new XElement(ns + "Enabled", "true"))),
+                new XElement(ns + "Principals",
+                    new XElement(ns + "Principal",
+                        new XAttribute("id", "Author"),
+                        new XElement(ns + "UserId", userName),
+                        new XElement(ns + "LogonType", "InteractiveToken"),
+                        new XElement(ns + "RunLevel", "HighestAvailable"))),
+                new XElement(ns + "Settings",
+                    new XElement(ns + "MultipleInstancesPolicy", "IgnoreNew"),
+                    new XElement(ns + "DisallowStartIfOnBatteries", "false"),
+                    new XElement(ns + "StopIfGoingOnBatteries", "false"),
+                    new XElement(ns + "AllowHardTerminate", "true"),
+                    new XElement(ns + "StartWhenAvailable", "true"),
+                    new XElement(ns + "RunOnlyIfNetworkAvailable", "false"),
+                    new XElement(ns + "IdleSettings",
+                        new XElement(ns + "StopOnIdleEnd", "false"),
+                        new XElement(ns + "RestartOnIdle", "false")),
+                    new XElement(ns + "AllowStartOnDemand", "true"),
+                    new XElement(ns + "Enabled", "true"),
+                    new XElement(ns + "Hidden", "false"),
+                    new XElement(ns + "RunOnlyIfIdle", "false"),
+                    new XElement(ns + "WakeToRun", "false"),
+                    new XElement(ns + "ExecutionTimeLimit", "PT0S"),
+                    new XElement(ns + "Priority", "7")),
+                new XElement(ns + "Actions",
+                    new XAttribute("Context", "Author"),
+                    new XElement(ns + "Exec",
+                        new XElement(ns + "Command", executable),
+                        new XElement(ns + "Arguments", "--tray"),
                         new XElement(ns + "WorkingDirectory", workingDirectory)))));
 
         return document.ToString(SaveOptions.DisableFormatting);

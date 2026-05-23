@@ -10,10 +10,69 @@ public partial class MainWindow : Window
     private bool _busy;
     private ServiceSnapshot? _lastServiceSnapshot;
     private SystemGuardSnapshot? _lastSystemSnapshot;
+    private bool _mouseMoverInitialized;
+    private bool _isRealExit;
+    private System.Windows.Forms.NotifyIcon? _notifyIcon;
 
-    public MainWindow()
+    private System.Windows.Threading.DispatcherTimer? _mouseMoverTimer;
+
+    public MainWindow(bool startInTray = false)
     {
         InitializeComponent();
+
+        _notifyIcon = new System.Windows.Forms.NotifyIcon
+        {
+            Icon = System.Drawing.SystemIcons.Shield,
+            Visible = true,
+            Text = "Mouse Logitech Simulation (OFF)"
+        };
+        _notifyIcon.DoubleClick += (s, e) =>
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+        };
+
+        var contextMenu = new System.Windows.Forms.ContextMenuStrip();
+        contextMenu.Items.Add("Buka QemuGaGuard", null, (s, e) =>
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+        });
+        contextMenu.Items.Add("Keluar Sepenuhnya", null, (s, e) =>
+        {
+            _isRealExit = true;
+            _notifyIcon.Visible = false;
+            _notifyIcon.Dispose();
+            System.Windows.Application.Current.Shutdown();
+        });
+        _notifyIcon.ContextMenuStrip = contextMenu;
+
+        _mouseMoverTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        _mouseMoverTimer.Tick += (s, e) =>
+        {
+            if (HumanMouseMover.ActiveBackend == "Logitech Driver")
+            {
+                MouseMoverCoordinateText.Visibility = Visibility.Visible;
+                MouseMoverCoordinateText.Text = HumanMouseMover.MovementStatus;
+                MouseMoverToggleStatusText.Text = $"ON: {HumanMouseMover.ActiveBackend} ({HumanMouseMover.MoveCount} moves)";
+            }
+            else
+            {
+                MouseMoverCoordinateText.Visibility = Visibility.Visible;
+                MouseMoverCoordinateText.Text = HumanMouseMover.MovementStatus;
+                MouseMoverToggleStatusText.Text = $"ON: {HumanMouseMover.ActiveBackend} ({HumanMouseMover.MoveCount} moves)";
+            }
+
+            if (_notifyIcon != null)
+            {
+                var text = $"Mouse Logitech Simulation\n{HumanMouseMover.MovementStatus}";
+                if (text.Length >= 127) text = text.Substring(0, 124) + "...";
+                _notifyIcon.Text = text;
+            }
+        };
+
         Loaded += async (_, _) => await RefreshUiAsync("State loaded.");
         Activated += async (_, _) =>
         {
@@ -22,6 +81,30 @@ public partial class MainWindow : Window
                 await RefreshUiAsync();
             }
         };
+
+        Closing += MainWindow_Closing;
+    }
+
+    protected override void OnStateChanged(EventArgs e)
+    {
+        if (WindowState == WindowState.Minimized)
+        {
+            Hide();
+        }
+        base.OnStateChanged(e);
+    }
+
+    private void MainWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        if (!_isRealExit)
+        {
+            e.Cancel = true;
+            Hide();
+            if (MouseMoverToggle.IsChecked == true)
+            {
+                _notifyIcon?.ShowBalloonTip(3000, "QemuGaGuard disembunyikan", "Mouse Mover tetap berjalan di latar belakang (System Tray).", System.Windows.Forms.ToolTipIcon.Info);
+            }
+        }
     }
 
     private async Task RefreshUiAsync(string? lastActionOverride = null)
@@ -124,6 +207,29 @@ public partial class MainWindow : Window
             : "OFF: no policy set";
 
         SystemActionText.Text = "Ready.";
+
+        if (!_mouseMoverInitialized && snapshot.MouseMoverTaskExists)
+        {
+            _mouseMoverInitialized = true;
+            HumanMouseMover.Start();
+        }
+
+        // Mouse mover state (independent of system snapshot).
+        var moverRunning = HumanMouseMover.IsRunning || snapshot.MouseMoverTaskExists;
+        SetToggleChecked(MouseMoverToggle, moverRunning);
+        if (moverRunning)
+        {
+            _mouseMoverTimer?.Start();
+            MouseMoverToggleStatusText.Text = $"ON: {HumanMouseMover.ActiveBackend} ({HumanMouseMover.MoveCount} moves)";
+            MouseMoverCoordinateText.Visibility = HumanMouseMover.ActiveBackend == "Logitech Driver" ? Visibility.Visible : Visibility.Collapsed;
+            MouseMoverCoordinateText.Text = HumanMouseMover.MovementStatus;
+        }
+        else
+        {
+            _mouseMoverTimer?.Stop();
+            MouseMoverToggleStatusText.Text = "OFF: idle";
+            MouseMoverCoordinateText.Visibility = Visibility.Collapsed;
+        }
     }
 
     private async Task RunActionAsync(GuardAction action)
@@ -202,6 +308,7 @@ public partial class MainWindow : Window
         PowerMenuGuardToggle.IsEnabled = enabled;
         VmShutdownBlockToggle.IsEnabled = enabled && _lastSystemSnapshot?.VmGuestShutdownStatus != "Missing";
         WindowsUpdateRestartToggle.IsEnabled = enabled;
+        MouseMoverToggle.IsEnabled = enabled;
         RefreshSystemButton.IsEnabled = enabled;
     }
 
@@ -377,6 +484,40 @@ public partial class MainWindow : Window
                 SystemGuardAction.EnableVmGuestShutdown,
                 "Enabling VM guest shutdown integration service...",
                 "VM shutdown block disabled.");
+        }
+    }
+
+    private async void MouseMoverToggle_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (MouseMoverToggle.IsChecked == true)
+        {
+            // Mark as permanent ON
+            await SystemGuardManager.InstallMouseMoverTaskAsync();
+
+            HumanMouseMover.Start();
+            // Give the background task a moment to initialise the backend.
+            await Task.Delay(200);
+            MouseMoverToggleStatusText.Text = $"ON: {HumanMouseMover.ActiveBackend} (0 moves)";
+            SystemActionText.Text = $"Mouse mover started via {HumanMouseMover.ActiveBackend}. Timer res 1ms.";
+            _mouseMoverTimer?.Start();
+        }
+        else
+        {
+            // Mark as permanent OFF
+            await SystemGuardManager.RemoveMouseMoverTaskAsync();
+
+            _mouseMoverTimer?.Stop();
+            MouseMoverCoordinateText.Visibility = Visibility.Collapsed;
+            MouseMoverToggleStatusText.Text = "Stopping...";
+            var totalMoves = HumanMouseMover.MoveCount;
+            var backend = HumanMouseMover.ActiveBackend;
+            await HumanMouseMover.StopAsync();
+            MouseMoverToggleStatusText.Text = "OFF: idle";
+            SystemActionText.Text = $"Mouse mover stopped ({backend}, {totalMoves} moves). Timer restored.";
+            if (_notifyIcon != null)
+            {
+                _notifyIcon.Text = "Mouse Logitech Simulation (OFF)";
+            }
         }
     }
 

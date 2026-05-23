@@ -3,7 +3,7 @@ using System.Windows;
 
 namespace QemuGaGuard;
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -14,6 +14,12 @@ public partial class App : Application
 
         try
         {
+            if (options.KeepAwake)
+            {
+                await SystemGuardManager.RunKeepAwakeLoopAsync();
+                return;
+            }
+
             if (options.KeepAwake)
             {
                 await SystemGuardManager.RunKeepAwakeLoopAsync();
@@ -52,11 +58,11 @@ public partial class App : Application
         {
             if (options.ShowUi || options.InvokedAction is not null)
             {
-                MessageBox.Show(
+                System.Windows.MessageBox.Show(
                     ex.Message,
                     "QEMU Guest Agent Guard",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
             }
 
             Shutdown(1);
@@ -69,10 +75,14 @@ public partial class App : Application
             return;
         }
 
-        var window = new MainWindow();
+        var window = new MainWindow(options.StartInTray);
         MainWindow = window;
         ShutdownMode = ShutdownMode.OnMainWindowClose;
-        window.Show();
+        
+        if (!options.StartInTray)
+        {
+            window.Show();
+        }
     }
 
     private sealed record StartupOptions(
@@ -80,9 +90,10 @@ public partial class App : Application
         SystemGuardAction? SystemAction,
         string? ExportStatePath,
         bool ShowUi,
-        bool KeepAwake)
+        bool KeepAwake,
+        bool StartInTray)
     {
-        public bool HeadlessOnly => !ShowUi && (InvokedAction is not null || SystemAction is not null || !string.IsNullOrWhiteSpace(ExportStatePath));
+        public bool HeadlessOnly => !ShowUi && !StartInTray && (InvokedAction is not null || SystemAction is not null || !string.IsNullOrWhiteSpace(ExportStatePath) || KeepAwake);
 
         public static StartupOptions Parse(string[] args)
         {
@@ -91,6 +102,7 @@ public partial class App : Application
             string? exportStatePath = null;
             bool showUi = false;
             bool keepAwake = false;
+            bool startInTray = false;
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -143,9 +155,13 @@ public partial class App : Application
                 {
                     keepAwake = true;
                 }
+                else if (string.Equals(current, "--tray", StringComparison.OrdinalIgnoreCase))
+                {
+                    startInTray = true;
+                }
             }
 
-            return new StartupOptions(invokedAction, systemAction, exportStatePath, showUi, keepAwake);
+            return new StartupOptions(invokedAction, systemAction, exportStatePath, showUi, keepAwake, startInTray);
         }
     }
 }
