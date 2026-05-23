@@ -78,6 +78,52 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Margin" Value="0,0,0,6" />
         </Style>
+
+        <Style x:Key="SwitchToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="62" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid Width="62" Height="32">
+                            <Border x:Name="Track"
+                                    CornerRadius="16"
+                                    Background="#53606D"
+                                    BorderBrush="#6A7886"
+                                    BorderThickness="1" />
+                            <Ellipse x:Name="Knob"
+                                     Width="26"
+                                     Height="26"
+                                     Margin="3"
+                                     HorizontalAlignment="Left"
+                                     Fill="#E8EEF5" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="Knob" Property="Fill" Value="#081019" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Track" Property="Opacity" Value="0.45" />
+                                <Setter TargetName="Knob" Property="Opacity" Value="0.6" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ToggleRowStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="14" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Background" Value="#10202D" />
+            <Setter Property="BorderBrush" Value="#24415B" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
     </Window.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -175,9 +221,30 @@
                                    TextWrapping="Wrap"
                                    FontSize="13" />
 
+                        <Border Style="{StaticResource ToggleRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="QEMU Guest Agent" Foreground="{StaticResource TextBrush}" FontSize="15" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="QemuToggleStatusText"
+                                               Margin="0,5,0,0"
+                                               Text="Checking"
+                                               Foreground="{StaticResource MutedBrush}"
+                                               TextWrapping="Wrap"
+                                               FontSize="12" />
+                                </StackPanel>
+                                <ToggleButton x:Name="QemuServiceToggle"
+                                              Grid.Column="1"
+                                              Style="{StaticResource SwitchToggleStyle}"
+                                              VerticalAlignment="Center"
+                                              Click="QemuServiceToggle_OnClick" />
+                            </Grid>
+                        </Border>
+
                         <WrapPanel>
-                            <Button x:Name="EnableButton" Width="150" Style="{StaticResource PrimaryButtonStyle}" Click="EnableButton_OnClick">Enable</Button>
-                            <Button x:Name="DisableButton" Width="150" Style="{StaticResource DangerButtonStyle}" Click="DisableButton_OnClick">Disable</Button>
                             <Button x:Name="RefreshButton" Width="140" Style="{StaticResource SecondaryButtonStyle}" Click="RefreshButton_OnClick">Refresh</Button>
                         </WrapPanel>
 
@@ -246,29 +313,92 @@
 
                         <WrapPanel>
                             <Button x:Name="ApplyHardeningButton" Width="210" Style="{StaticResource PrimaryButtonStyle}" Click="ApplyHardeningButton_OnClick">Apply Hardening</Button>
-                            <Button x:Name="DisableVmGuestShutdownButton" Width="230" Style="{StaticResource DangerButtonStyle}" Click="DisableVmGuestShutdownButton_OnClick">Disable VM Shutdown Svc</Button>
-                        </WrapPanel>
-
-                        <WrapPanel>
-                            <Button x:Name="SetPowerButtonDoNothingButton" Width="230" Style="{StaticResource PrimaryButtonStyle}" Click="SetPowerButtonDoNothingButton_OnClick">AC Power: Do Nothing</Button>
-                            <Button x:Name="RestorePowerButtonShutdownButton" Width="190" Style="{StaticResource SecondaryButtonStyle}" Click="RestorePowerButtonShutdownButton_OnClick">AC Power: Shutdown</Button>
-                        </WrapPanel>
-
-                        <WrapPanel>
-                            <Button x:Name="InstallKeepAwakeButton" Width="210" Style="{StaticResource PrimaryButtonStyle}" Click="InstallKeepAwakeButton_OnClick">Install Keep-Awake</Button>
-                            <Button x:Name="RemoveKeepAwakeButton" Width="190" Style="{StaticResource DangerButtonStyle}" Click="RemoveKeepAwakeButton_OnClick">Remove Keep-Awake</Button>
-                        </WrapPanel>
-
-                        <WrapPanel>
-                            <Button x:Name="HidePowerMenuButton" Width="190" Style="{StaticResource SecondaryButtonStyle}" Click="HidePowerMenuButton_OnClick">Hide Power Menu</Button>
-                            <Button x:Name="ShowPowerMenuButton" Width="190" Style="{StaticResource SecondaryButtonStyle}" Click="ShowPowerMenuButton_OnClick">Show Power Menu</Button>
-                            <Button x:Name="SetSleepNeverButton" Width="160" Style="{StaticResource SecondaryButtonStyle}" Click="SetSleepNeverButton_OnClick">Sleep: Never</Button>
-                        </WrapPanel>
-
-                        <WrapPanel>
-                            <Button x:Name="WindowsUpdateNoRestartButton" Width="250" Style="{StaticResource SecondaryButtonStyle}" Click="WindowsUpdateNoRestartButton_OnClick">No Update Auto-Restart</Button>
                             <Button x:Name="RefreshSystemButton" Width="120" Style="{StaticResource SecondaryButtonStyle}" Click="RefreshSystemButton_OnClick">Refresh</Button>
                         </WrapPanel>
+
+                        <Border Style="{StaticResource ToggleRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="AC Power Button Guard" Foreground="{StaticResource TextBrush}" FontSize="15" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="AcPowerToggleStatusText" Margin="0,5,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="12" />
+                                </StackPanel>
+                                <ToggleButton x:Name="AcPowerGuardToggle" Grid.Column="1" Style="{StaticResource SwitchToggleStyle}" VerticalAlignment="Center" Click="AcPowerGuardToggle_OnClick" />
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource ToggleRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Keep-Awake Task" Foreground="{StaticResource TextBrush}" FontSize="15" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="KeepAwakeToggleStatusText" Margin="0,5,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="12" />
+                                </StackPanel>
+                                <ToggleButton x:Name="KeepAwakeToggle" Grid.Column="1" Style="{StaticResource SwitchToggleStyle}" VerticalAlignment="Center" Click="KeepAwakeToggle_OnClick" />
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource ToggleRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Sleep Never" Foreground="{StaticResource TextBrush}" FontSize="15" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="SleepNeverToggleStatusText" Margin="0,5,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="12" />
+                                </StackPanel>
+                                <ToggleButton x:Name="SleepNeverToggle" Grid.Column="1" Style="{StaticResource SwitchToggleStyle}" VerticalAlignment="Center" Click="SleepNeverToggle_OnClick" />
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource ToggleRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Power Menu Guard" Foreground="{StaticResource TextBrush}" FontSize="15" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="PowerMenuToggleStatusText" Margin="0,5,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="12" />
+                                </StackPanel>
+                                <ToggleButton x:Name="PowerMenuGuardToggle" Grid.Column="1" Style="{StaticResource SwitchToggleStyle}" VerticalAlignment="Center" Click="PowerMenuGuardToggle_OnClick" />
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource ToggleRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="VM Guest Shutdown Block" Foreground="{StaticResource TextBrush}" FontSize="15" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="VmShutdownToggleStatusText" Margin="0,5,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="12" />
+                                </StackPanel>
+                                <ToggleButton x:Name="VmShutdownBlockToggle" Grid.Column="1" Style="{StaticResource SwitchToggleStyle}" VerticalAlignment="Center" Click="VmShutdownBlockToggle_OnClick" />
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource ToggleRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Windows Update Restart Block" Foreground="{StaticResource TextBrush}" FontSize="15" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="WindowsUpdateToggleStatusText" Margin="0,5,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="12" />
+                                </StackPanel>
+                                <ToggleButton x:Name="WindowsUpdateRestartToggle" Grid.Column="1" Style="{StaticResource SwitchToggleStyle}" VerticalAlignment="Center" Click="WindowsUpdateRestartToggle_OnClick" />
+                            </Grid>
+                        </Border>
 
                         <TextBlock Style="{StaticResource LabelStyle}" Text="Last Windows Action" />
                         <TextBlock x:Name="SystemActionText" Foreground="{StaticResource TextBrush}" FontSize="13" TextWrapping="Wrap" />

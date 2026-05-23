@@ -123,7 +123,9 @@ public partial class App : Application
                         "disable-vm-guest-shutdown" => SystemGuardAction.DisableVmGuestShutdown,
                         "enable-vm-guest-shutdown" => SystemGuardAction.EnableVmGuestShutdown,
                         "set-sleep-never" => SystemGuardAction.SetSleepNever,
+                        "restore-sleep-timeouts" => SystemGuardAction.RestoreSleepTimeouts,
                         "set-windows-update-no-auto-restart" => SystemGuardAction.SetWindowsUpdateNoAutoRestart,
+                        "clear-windows-update-no-auto-restart" => SystemGuardAction.ClearWindowsUpdateNoAutoRestart,
                         "apply-recommended-hardening" => SystemGuardAction.ApplyRecommendedHardening,
                         _ => throw new ArgumentException($"Unknown system action: {actionValue}")
                     };

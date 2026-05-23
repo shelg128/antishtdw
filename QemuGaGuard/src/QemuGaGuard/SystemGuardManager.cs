@@ -22,6 +22,8 @@ public enum SystemGuardAction
     EnableVmGuestShutdown,
     SetSleepNever,
     SetWindowsUpdateNoAutoRestart,
+    ClearWindowsUpdateNoAutoRestart,
+    RestoreSleepTimeouts,
     ApplyRecommendedHardening
 }
 
@@ -102,6 +104,12 @@ public static class SystemGuardManager
             case SystemGuardAction.SetWindowsUpdateNoAutoRestart:
                 SetWindowsUpdateNoAutoRestart(true);
                 break;
+            case SystemGuardAction.ClearWindowsUpdateNoAutoRestart:
+                SetWindowsUpdateNoAutoRestart(false);
+                break;
+            case SystemGuardAction.RestoreSleepTimeouts:
+                await RestoreSleepTimeoutsAsync();
+                break;
             case SystemGuardAction.ApplyRecommendedHardening:
                 await ApplyRecommendedHardeningAsync();
                 break;
@@ -149,6 +157,15 @@ public static class SystemGuardManager
     {
         await RunProcessAsync("powercfg.exe", "/setacvalueindex", "SCHEME_CURRENT", "SUB_SLEEP", "STANDBYIDLE", "0");
         await RunProcessAsync("powercfg.exe", "/setdcvalueindex", "SCHEME_CURRENT", "SUB_SLEEP", "STANDBYIDLE", "0");
+        await RunProcessAsync("powercfg.exe", "/setacvalueindex", "SCHEME_CURRENT", "SUB_SLEEP", "HIBERNATEIDLE", "0");
+        await RunProcessAsync("powercfg.exe", "/setdcvalueindex", "SCHEME_CURRENT", "SUB_SLEEP", "HIBERNATEIDLE", "0");
+        await RunProcessAsync("powercfg.exe", "/setactive", "SCHEME_CURRENT");
+    }
+
+    private static async Task RestoreSleepTimeoutsAsync()
+    {
+        await RunProcessAsync("powercfg.exe", "/setacvalueindex", "SCHEME_CURRENT", "SUB_SLEEP", "STANDBYIDLE", "2700");
+        await RunProcessAsync("powercfg.exe", "/setdcvalueindex", "SCHEME_CURRENT", "SUB_SLEEP", "STANDBYIDLE", "1200");
         await RunProcessAsync("powercfg.exe", "/setacvalueindex", "SCHEME_CURRENT", "SUB_SLEEP", "HIBERNATEIDLE", "0");
         await RunProcessAsync("powercfg.exe", "/setdcvalueindex", "SCHEME_CURRENT", "SUB_SLEEP", "HIBERNATEIDLE", "0");
         await RunProcessAsync("powercfg.exe", "/setactive", "SCHEME_CURRENT");

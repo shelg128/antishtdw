@@ -9,6 +9,7 @@ public partial class MainWindow : Window
 {
     private bool _busy;
     private ServiceSnapshot? _lastServiceSnapshot;
+    private SystemGuardSnapshot? _lastSystemSnapshot;
 
     public MainWindow()
     {
@@ -54,6 +55,10 @@ public partial class MainWindow : Window
         _lastServiceSnapshot = snapshot;
         ServiceBadgeText.Text = snapshot.BadgeText;
         ServiceBadgeText.Foreground = new SolidColorBrush(snapshot.BadgeColor);
+        SetToggleChecked(QemuServiceToggle, snapshot.Exists && snapshot.StartModeText != "Disabled");
+        QemuToggleStatusText.Text = snapshot.Exists
+            ? $"{snapshot.StatusText} / {snapshot.StartModeText}"
+            : "Missing on this machine";
         AdminStateText.Text = snapshot.IsElevated
             ? "Administrator session. Service start mode and stop/start actions can be changed from this window."
             : "Standard session. Enable/Disable will trigger UAC because service configuration needs administrator rights.";
@@ -68,13 +73,13 @@ public partial class MainWindow : Window
             : "The service is not installed here, so this tool has nothing to toggle.";
         LastActionText.Text = lastActionOverride ?? "Ready.";
 
-        EnableButton.IsEnabled = snapshot.Exists && !_busy;
-        DisableButton.IsEnabled = snapshot.Exists && !_busy;
+        QemuServiceToggle.IsEnabled = snapshot.Exists && !_busy;
         ElevateButton.IsEnabled = !snapshot.IsElevated && !_busy;
     }
 
     private void ApplySystemSnapshot(SystemGuardSnapshot snapshot)
     {
+        _lastSystemSnapshot = snapshot;
         PowerButtonAcText.Text = snapshot.PowerButtonAc;
         PowerButtonDcText.Text = snapshot.PowerButtonDc;
         SleepAfterText.Text = $"AC: {snapshot.SleepAfterAc} / DC: {snapshot.SleepAfterDc}";
@@ -91,6 +96,32 @@ public partial class MainWindow : Window
         PowerMenuPolicyText.Text = snapshot.PowerMenuHidden
             ? "Hidden for current user"
             : "Visible for current user";
+
+        SetToggleChecked(AcPowerGuardToggle, snapshot.PowerButtonAc == "Do nothing");
+        SetToggleChecked(KeepAwakeToggle, snapshot.KeepAwakeTaskExists);
+        SetToggleChecked(SleepNeverToggle, snapshot.SleepAfterAc == "Never" && snapshot.SleepAfterDc == "Never");
+        SetToggleChecked(PowerMenuGuardToggle, snapshot.PowerMenuHidden);
+        SetToggleChecked(VmShutdownBlockToggle, snapshot.VmGuestShutdownStartMode == "Disabled");
+        SetToggleChecked(WindowsUpdateRestartToggle, snapshot.WindowsUpdateNoAutoRestart);
+
+        AcPowerToggleStatusText.Text = snapshot.PowerButtonAc == "Do nothing"
+            ? "ON: AC power button ignored"
+            : $"OFF: AC power button is {snapshot.PowerButtonAc}";
+        KeepAwakeToggleStatusText.Text = snapshot.KeepAwakeTaskExists
+            ? $"ON: {snapshot.KeepAwakeTaskStatus}"
+            : "OFF: task not installed";
+        SleepNeverToggleStatusText.Text = snapshot.SleepAfterAc == "Never" && snapshot.SleepAfterDc == "Never"
+            ? "ON: sleep disabled"
+            : $"OFF: AC {snapshot.SleepAfterAc}, DC {snapshot.SleepAfterDc}";
+        PowerMenuToggleStatusText.Text = snapshot.PowerMenuHidden
+            ? "ON: power menu hidden"
+            : "OFF: power menu visible";
+        VmShutdownToggleStatusText.Text = snapshot.VmGuestShutdownStartMode == "Disabled"
+            ? "ON: VM shutdown service disabled"
+            : $"OFF: {snapshot.VmGuestShutdownStatus} / {snapshot.VmGuestShutdownStartMode}";
+        WindowsUpdateToggleStatusText.Text = snapshot.WindowsUpdateNoAutoRestart
+            ? "ON: no auto-restart while logged on"
+            : "OFF: no policy set";
 
         SystemActionText.Text = "Ready.";
     }
@@ -160,22 +191,23 @@ public partial class MainWindow : Window
     private void SetButtonsEnabled(bool enabled)
     {
         var serviceExists = _lastServiceSnapshot?.Exists ?? false;
-        EnableButton.IsEnabled = enabled && serviceExists;
-        DisableButton.IsEnabled = enabled && serviceExists;
+        QemuServiceToggle.IsEnabled = enabled && serviceExists;
         RefreshButton.IsEnabled = enabled;
         ServicesButton.IsEnabled = enabled;
         ElevateButton.IsEnabled = enabled && !QemuGaServiceManager.IsProcessElevated();
-        SetPowerButtonDoNothingButton.IsEnabled = enabled;
-        RestorePowerButtonShutdownButton.IsEnabled = enabled;
-        InstallKeepAwakeButton.IsEnabled = enabled;
-        RemoveKeepAwakeButton.IsEnabled = enabled;
-        HidePowerMenuButton.IsEnabled = enabled;
-        ShowPowerMenuButton.IsEnabled = enabled;
         ApplyHardeningButton.IsEnabled = enabled;
-        DisableVmGuestShutdownButton.IsEnabled = enabled;
-        SetSleepNeverButton.IsEnabled = enabled;
-        WindowsUpdateNoRestartButton.IsEnabled = enabled;
+        AcPowerGuardToggle.IsEnabled = enabled;
+        KeepAwakeToggle.IsEnabled = enabled;
+        SleepNeverToggle.IsEnabled = enabled;
+        PowerMenuGuardToggle.IsEnabled = enabled;
+        VmShutdownBlockToggle.IsEnabled = enabled && _lastSystemSnapshot?.VmGuestShutdownStatus != "Missing";
+        WindowsUpdateRestartToggle.IsEnabled = enabled;
         RefreshSystemButton.IsEnabled = enabled;
+    }
+
+    private static void SetToggleChecked(System.Windows.Controls.Primitives.ToggleButton toggle, bool isChecked)
+    {
+        toggle.IsChecked = isChecked;
     }
 
     private async Task RunSystemActionAsync(SystemGuardAction action, string busyText, string successText)
@@ -211,6 +243,11 @@ public partial class MainWindow : Window
     private async void DisableButton_OnClick(object sender, RoutedEventArgs e)
     {
         await RunActionAsync(GuardAction.Disable);
+    }
+
+    private async void QemuServiceToggle_OnClick(object sender, RoutedEventArgs e)
+    {
+        await RunActionAsync(QemuServiceToggle.IsChecked == true ? GuardAction.Enable : GuardAction.Disable);
     }
 
     private async void RefreshButton_OnClick(object sender, RoutedEventArgs e)
@@ -251,6 +288,114 @@ public partial class MainWindow : Window
             SystemGuardAction.SetPowerButtonDoNothing,
             "Setting AC power button to Do nothing...",
             "AC power button is now Do nothing.");
+    }
+
+    private async void AcPowerGuardToggle_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (AcPowerGuardToggle.IsChecked == true)
+        {
+            await RunSystemActionAsync(
+                SystemGuardAction.SetPowerButtonDoNothing,
+                "Setting AC power button to Do nothing...",
+                "AC power button guard enabled.");
+        }
+        else
+        {
+            await RunSystemActionAsync(
+                SystemGuardAction.SetPowerButtonShutdown,
+                "Setting AC power button to Shut down...",
+                "AC power button guard disabled.");
+        }
+    }
+
+    private async void KeepAwakeToggle_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (KeepAwakeToggle.IsChecked == true)
+        {
+            await RunSystemActionAsync(
+                SystemGuardAction.InstallKeepAwake,
+                "Installing keep-awake scheduled task...",
+                "Keep-awake enabled.");
+        }
+        else
+        {
+            await RunSystemActionAsync(
+                SystemGuardAction.RemoveKeepAwake,
+                "Removing keep-awake scheduled task...",
+                "Keep-awake disabled.");
+        }
+    }
+
+    private async void SleepNeverToggle_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (SleepNeverToggle.IsChecked == true)
+        {
+            await RunSystemActionAsync(
+                SystemGuardAction.SetSleepNever,
+                "Setting sleep and hibernate timeouts to Never...",
+                "Sleep guard enabled.");
+        }
+        else
+        {
+            await RunSystemActionAsync(
+                SystemGuardAction.RestoreSleepTimeouts,
+                "Restoring Balanced sleep timeout values...",
+                "Sleep guard disabled.");
+        }
+    }
+
+    private async void PowerMenuGuardToggle_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (PowerMenuGuardToggle.IsChecked == true)
+        {
+            await RunSystemActionAsync(
+                SystemGuardAction.HidePowerMenu,
+                "Hiding Windows power menu for current user...",
+                "Power menu guard enabled.");
+        }
+        else
+        {
+            await RunSystemActionAsync(
+                SystemGuardAction.ShowPowerMenu,
+                "Showing Windows power menu for current user...",
+                "Power menu guard disabled.");
+        }
+    }
+
+    private async void VmShutdownBlockToggle_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (VmShutdownBlockToggle.IsChecked == true)
+        {
+            await RunSystemActionAsync(
+                SystemGuardAction.DisableVmGuestShutdown,
+                "Disabling VM guest shutdown integration service...",
+                "VM shutdown block enabled.");
+        }
+        else
+        {
+            await RunSystemActionAsync(
+                SystemGuardAction.EnableVmGuestShutdown,
+                "Enabling VM guest shutdown integration service...",
+                "VM shutdown block disabled.");
+        }
+    }
+
+    private async void WindowsUpdateRestartToggle_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (WindowsUpdateRestartToggle.IsChecked == true)
+        {
+            await RunSystemActionAsync(
+                SystemGuardAction.SetWindowsUpdateNoAutoRestart,
+                "Setting Windows Update no auto-restart policy...",
+                "Windows Update restart block enabled.");
+        }
+        else
+        {
+            await RunSystemActionAsync(
+                SystemGuardAction.ClearWindowsUpdateNoAutoRestart,
+                "Removing Windows Update no auto-restart policy...",
+                "Windows Update restart block disabled.");
+        }
     }
 
     private async void ApplyHardeningButton_OnClick(object sender, RoutedEventArgs e)
